@@ -2,8 +2,6 @@
 
 A comprehensive Data Products governance platform built on Azure Databricks, demonstrating data product discovery, ODCS data contracts, product-level lineage visualization, and schema versioning.
 
-**Live App**: https://data-products-manager-4116661263058619.19.azure.databricksapps.com
-
 ## Architecture
 
 ```
@@ -201,7 +199,7 @@ dp_implementation/
 | Resource | Value |
 |---|---|
 | Workspace | `adb-4116661263058619.19.azuredatabricks.net` |
-| Profile | `uc-demo-ws-ne` |
+| Profile | `<PROFILE_NAME>` |
 | SQL Warehouse | `data-products-poc` (ID: `fe12763ffa92c9b5`) |
 | Lakebase Project | `data-products-metadata` |
 | Lakebase Endpoint | `ep-square-bird-ea8u2b9t.database.northeurope.azuredatabricks.net` |
@@ -217,7 +215,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Requires authenticated Databricks CLI profile `uc-demo-ws-ne`. Uses Lakebase PG locally.
+Requires authenticated Databricks CLI profile. Uses Lakebase PG locally.
 
 ### Frontend
 
@@ -250,19 +248,19 @@ The app is deployed as a Databricks App:
 for f in app/*.py app/models/*.py app/routers/*.py app/services/*.py \
          requirements.txt app.yaml; do
   databricks workspace import "/Users/<user>/apps/data-products-manager/$f" \
-    --file "$f" --format AUTO --overwrite --profile=uc-demo-ws-ne
+    --file "$f" --format AUTO --overwrite --profile=<PROFILE_NAME>
 done
 
 # Upload pre-built frontend
 for f in frontend/dist/index.html frontend/dist/assets/*; do
   databricks workspace import "/Users/<user>/apps/data-products-manager/$f" \
-    --file "$f" --format AUTO --overwrite --profile=uc-demo-ws-ne
+    --file "$f" --format AUTO --overwrite --profile=<PROFILE_NAME>
 done
 
 # Deploy
 databricks apps deploy data-products-manager \
   --source-code-path "/Workspace/Users/<user>/apps/data-products-manager" \
-  --mode SNAPSHOT --no-wait --profile=uc-demo-ws-ne
+  --mode SNAPSHOT --no-wait --profile=<PROFILE_NAME>
 ```
 
 After deployment, open the app URL and click **"Trigger Scan"** in Settings to populate data from Unity Catalog, then **"Generate Contracts"** on each product.
