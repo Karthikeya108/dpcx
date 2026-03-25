@@ -1,4 +1,4 @@
-# Data Products Manager
+# Databricks Data Products and Contracts Manager
 
 A comprehensive Data Products governance platform built on Azure Databricks, demonstrating data product discovery, ODCS data contracts, product-level lineage visualization, and schema versioning.
 
