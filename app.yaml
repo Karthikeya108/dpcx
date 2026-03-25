@@ -1,0 +1,23 @@
+command:
+  - uvicorn
+  - app.main:app
+  - --host=0.0.0.0
+  - --port=8000
+
+resources:
+  - name: sql-warehouse
+    sql_warehouse:
+      id: fe12763ffa92c9b5
+      permission: CAN_USE
+
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    value: fe12763ffa92c9b5
+  - name: LAKEBASE_HOST
+    value: ep-square-bird-ea8u2b9t.database.northeurope.azuredatabricks.net
+  - name: LAKEBASE_DATABASE
+    value: data_products_metadata
+  - name: LAKEBASE_PROJECT
+    value: data-products-metadata
+  - name: SCAN_TAG_KEY
+    value: data_product
