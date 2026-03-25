@@ -1,16 +1,18 @@
 """Pydantic schemas for API request/response models."""
 
 from datetime import datetime
-from typing import Optional
+from typing import Annotated, Optional
 
+from pydantic import BaseModel, BeforeValidator
 
-from pydantic import BaseModel
+# Coerce UUID objects to strings for Lakebase PG compatibility
+StrId = Annotated[str, BeforeValidator(lambda v: str(v))]
 
 
 # ─── Data Products ───
 
 class DataProductColumnOut(BaseModel):
-    id: str
+    id: StrId
     column_name: str
     data_type: str
     description: Optional[str] = None
@@ -22,7 +24,7 @@ class DataProductColumnOut(BaseModel):
 
 
 class DataProductTableOut(BaseModel):
-    id: str
+    id: StrId
     catalog_name: str
     schema_name: str
     table_name: str
@@ -37,7 +39,7 @@ class DataProductTableOut(BaseModel):
 
 
 class DataProductOut(BaseModel):
-    id: str
+    id: StrId
     name: str
     display_name: Optional[str] = None
     description: Optional[str] = None
@@ -63,8 +65,8 @@ class DataProductDetailOut(DataProductOut):
 # ─── Data Product Versions ───
 
 class DataProductVersionOut(BaseModel):
-    id: str
-    product_id: str
+    id: StrId
+    product_id: StrId
     version: str
     status: str = "draft"
     change_type: Optional[str] = None
@@ -100,7 +102,7 @@ class PublishVersionIn(BaseModel):
 # ─── Data Contracts ───
 
 class DataContractCreate(BaseModel):
-    product_id: Optional[str] = None
+    product_id: Optional[StrId] = None
     name: str
     version: str = "1.0.0"
     description: Optional[str] = None
@@ -120,7 +122,7 @@ class DataContractUpdate(BaseModel):
 
 
 class DataContractVersionOut(BaseModel):
-    id: str
+    id: StrId
     version: str
     change_summary: Optional[str] = None
     created_by: Optional[str] = None
@@ -130,8 +132,8 @@ class DataContractVersionOut(BaseModel):
 
 
 class DataContractOut(BaseModel):
-    id: str
-    product_id: Optional[str] = None
+    id: StrId
+    product_id: Optional[StrId] = None
     name: str
     version: str
     description: Optional[str] = None
@@ -152,7 +154,7 @@ class DataContractDetailOut(DataContractOut):
 
 
 class GenerateContractsOut(BaseModel):
-    product_id: str
+    product_id: StrId
     product_name: str
     contracts_created: int
     contracts: list[DataContractOut]
@@ -161,7 +163,7 @@ class GenerateContractsOut(BaseModel):
 # ─── Lineage ───
 
 class LineageNodeOut(BaseModel):
-    id: str
+    id: StrId
     name: str
     domain: str
     status: str = "active"
@@ -190,7 +192,7 @@ class ScanTriggerIn(BaseModel):
 
 
 class ScanJobOut(BaseModel):
-    id: str
+    id: StrId
     job_type: str
     tag_prefix: Optional[str] = None
     tag_suffix: Optional[str] = None

@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import OperationalError
 
-from app.db import _get_engine, _is_app_environment
+from app.db import _ensure_tables
 from app.routers import contracts, products, settings
 
 logger = logging.getLogger(__name__)
@@ -53,7 +53,7 @@ def _auto_sync_on_startup():
     session = sessionmaker(bind=engine)()
     try:
         count = session.query(DataProduct).count()
-        if count == 0 and _is_app_environment():
+        if count == 0:
             logger.info("Database empty — triggering auto-sync from Unity Catalog...")
             from app.services.unity_catalog import sync_products_from_uc
             scan = sync_products_from_uc(session)
@@ -129,9 +129,10 @@ def _seed_lineage(session):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     try:
+        _ensure_tables()
         _seed_default_settings()
     except Exception as e:
-        logger.error(f"Startup seed failed: {e}")
+        logger.error(f"Startup failed: {e}")
     yield
 
 
