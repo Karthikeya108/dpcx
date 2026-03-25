@@ -1,4 +1,4 @@
-"""SQLAlchemy ORM models — compatible with both PostgreSQL (Lakebase) and SQLite."""
+"""SQLAlchemy ORM models for Lakebase PostgreSQL metadata tables."""
 
 import uuid
 from datetime import datetime

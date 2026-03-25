@@ -43,9 +43,6 @@ Thumbs.db
 .databricks/
 frontend/.databricks/
 
-# SQLite runtime database
-*.db
-
 # Logs
 *.log
 /tmp/

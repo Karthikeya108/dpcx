@@ -18,12 +18,13 @@ A comprehensive Data Products governance platform built on Azure Databricks, dem
            ┌──────────────────────┼───────────────────────┐
            │                      │                       │
   ┌────────▼─────────┐  ┌────────▼───────────┐  ┌────────▼──────┐
-  │  SQLite / Lakebase│  │  Unity Catalog     │  │  SQL Statement│
-  │  (Metadata)      │  │  (Governed Tags)   │  │  API (OBO)    │
-  │  - Products      │  │  - 3 Catalogs      │  │  - Tag scan   │
-  │  - Contracts     │  │  - 9 Schemas       │  │  - Column     │
-  │  - Versions      │  │  - 28 Tables       │  │    metadata   │
-  │  - Lineage       │  │  - ~2.4M Records   │  │  - Lineage    │
+  │  Lakebase        │  │  Unity Catalog     │  │  SQL Statement│
+  │  Autoscaling     │  │  (Governed Tags)   │  │  API (OBO)    │
+  │  (PostgreSQL)    │  │  - 3 Catalogs      │  │  - Tag scan   │
+  │  - Products      │  │  - 9 Schemas       │  │  - Column     │
+  │  - Contracts     │  │  - 28 Tables       │  │    metadata   │
+  │  - Versions      │  │  - ~2.4M Records   │  │  - Lineage    │
+  │  - Lineage       │  │                    │  │    discovery   │
   └──────────────────┘  └────────────────────┘  └───────────────┘
 ```
 
@@ -58,13 +59,11 @@ Tables are grouped into **8 data products** using the Unity Catalog **governed t
 
 **Risk Analytics** is a derived data product created via CTAS (CREATE TABLE AS SELECT) from 5 source products, establishing real Unity Catalog table-level lineage.
 
-### 3. Metadata Storage
+### 3. Lakebase Autoscaling (Metadata Store)
 
-The app uses a dual storage strategy:
-- **Databricks App**: SQLite within the container (auto-populated from UC on first scan)
-- **Local dev**: Lakebase Autoscaling PostgreSQL (`data-products-metadata`, 4-8 CU)
+A Lakebase Autoscaling PostgreSQL instance (`data-products-metadata`, 4-8 CU) provides persistent metadata storage. The app connects via the Databricks SDK — in the App environment the service principal uses `databricks_superuser` for PG auth, in local dev the CLI generates user credentials.
 
-Both use the same SQLAlchemy ORM models. Metadata tables:
+Metadata tables:
 - `data_products` — Product metadata synced from Unity Catalog
 - `data_product_tables` — Tables belonging to each product with descriptions
 - `data_product_columns` — Column metadata with PII flags and descriptions
@@ -151,21 +150,23 @@ GET  /api/data-products/{id}/versions/{a}/diff/{b}  — Diff two versions
 - **Data Products** — Searchable list with domain labels ("Insurance Policy" etc.)
 - **Product Detail** — Tables with expandable column metadata, PII badges, output port contracts, version history with detect/create/publish/deprecate actions
 - **Lineage** — Interactive React Flow graph with product nodes, contract port squares, animated edges
-- **Data Contracts** — CRUD with ODCS YAML preview/edit, download/upload, red cancel button on edit
+- **Data Contracts** — CRUD with ODCS YAML preview/edit, download/upload, version history
 - **Settings** — Workspace configuration, scan trigger with tag prefix/suffix filters
 
-**Authentication**: On-behalf-of (OBO) — the app uses the logged-in user's `x-forwarded-access-token` for Unity Catalog API calls and SQL Statement execution.
+**Authentication**:
+- **Databricks App**: The service principal connects to Lakebase via SDK-generated PG credentials. The user's OBO token (`x-forwarded-access-token`) is used for Unity Catalog API and SQL Statement API calls.
+- **Local dev**: Databricks CLI profile credentials for both Lakebase and UC APIs.
 
 ## Project Structure
 
 ```
 dp_implementation/
 ├── app/                          # FastAPI backend
-│   ├── main.py                   # App entrypoint, startup sync
+│   ├── main.py                   # App entrypoint, startup hooks
 │   ├── config.py                 # Settings
-│   ├── db.py                     # SQLite / Lakebase connection (OBO)
+│   ├── db.py                     # Lakebase PG connection (SDK + CLI)
 │   ├── models/
-│   │   ├── database.py           # ORM models (SQLite + PG compatible)
+│   │   ├── database.py           # SQLAlchemy ORM models
 │   │   └── schemas.py            # Pydantic request/response schemas
 │   ├── routers/
 │   │   ├── products.py           # Products, versioning, lineage API
@@ -215,7 +216,7 @@ pip install -r requirements.txt
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-Requires authenticated Databricks CLI profile. Uses Lakebase PG locally.
+Requires authenticated Databricks CLI profile with access to the Lakebase project and Unity Catalog.
 
 ### Frontend
 
@@ -263,13 +264,19 @@ databricks apps deploy data-products-manager \
   --mode SNAPSHOT --no-wait --profile=<PROFILE_NAME>
 ```
 
-After deployment, open the app URL and click **"Trigger Scan"** in Settings to populate data from Unity Catalog, then **"Generate Contracts"** on each product.
+**Prerequisites**: The App's service principal must have:
+- `databricks_superuser` role on the Lakebase project (for PG auth)
+- `USE_CATALOG`, `USE_SCHEMA`, `SELECT` on the insurance catalogs and `system` catalog
+
+After deployment, open the app and click **"Trigger Scan"** in Settings, then **"Generate Contracts"** on each product.
 
 ## Key Technologies
 
-- **Azure Databricks** — Unity Catalog, Governed Tags, SQL Warehouse, Lakebase, Apps
+- **Azure Databricks** — Unity Catalog, Governed Tags, SQL Warehouse, Lakebase Autoscaling, Apps
 - **FastAPI** — Python REST API backend
-- **SQLAlchemy 2.0** — ORM (SQLite in App, PostgreSQL in local dev)
+- **SQLAlchemy 2.0** — ORM for Lakebase PostgreSQL
+- **psycopg2** — PostgreSQL adapter with OAuth token refresh
+- **Databricks SDK** — Service principal authentication and PG credential generation
 - **React 19** + **TypeScript** — Frontend SPA
 - **Tailwind CSS** + **shadcn/ui** — UI styling
 - **React Flow** — Lineage graph visualization

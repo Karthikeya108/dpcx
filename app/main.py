@@ -10,7 +10,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.exc import OperationalError
 
-from app.db import _ensure_tables
+from app.db import _ensure_tables, _get_engine
 from app.routers import contracts, products, settings
 
 logger = logging.getLogger(__name__)
@@ -42,88 +42,6 @@ def _seed_default_settings():
         session.rollback()
     finally:
         session.close()
-
-
-def _auto_sync_on_startup():
-    """Auto-sync data products from UC on app startup if database is empty."""
-    from sqlalchemy.orm import sessionmaker
-    from app.models.database import DataProduct
-
-    engine = _get_engine()
-    session = sessionmaker(bind=engine)()
-    try:
-        count = session.query(DataProduct).count()
-        if count == 0:
-            logger.info("Database empty — triggering auto-sync from Unity Catalog...")
-            from app.services.unity_catalog import sync_products_from_uc
-            scan = sync_products_from_uc(session)
-            logger.info(f"Auto-sync: {scan.products_found} products, {scan.tables_found} tables")
-
-            if scan.products_found > 0:
-                # Auto-generate contracts
-                from app.services.odcs import generate_odcs_for_asset
-                from app.models.database import DataContract, DataContractVersion
-                products = session.query(DataProduct).all()
-                contract_count = 0
-                for product in products:
-                    for table in product.tables:
-                        contract_name = f"{product.tag_value}.{table.table_name}"
-                        domain_short = product.domain.replace("ins_", "")
-                        contract = DataContract(
-                            product_id=product.id,
-                            name=contract_name,
-                            version="1.0.0",
-                            description=table.description or f"Output port contract for {table.full_name}",
-                            status="draft",
-                            contract_type="output",
-                            owner=f"{domain_short.title()} Data Engineering",
-                        )
-                        session.add(contract)
-                        session.flush()
-                        contract.odcs_yaml = generate_odcs_for_asset(contract, product, table)
-                        session.add(DataContractVersion(
-                            contract_id=contract.id, version="1.0.0",
-                            odcs_yaml=contract.odcs_yaml,
-                            change_summary=f"Auto-generated for {table.full_name}",
-                        ))
-                        contract_count += 1
-                session.commit()
-                logger.info(f"Auto-generated {contract_count} contracts")
-
-                # Seed lineage for risk_analytics
-                _seed_lineage(session)
-    except Exception as e:
-        logger.error(f"Auto-sync failed: {e}")
-        session.rollback()
-    finally:
-        session.close()
-
-
-def _seed_lineage(session):
-    """Seed lineage for the risk_analytics derived product."""
-    from app.models.database import DataProduct, DataProductLineage
-
-    risk = session.query(DataProduct).filter_by(tag_value="risk_analytics").first()
-    if not risk:
-        return
-
-    sources = ["customer_360", "claims_financial", "underwriting_risk", "policy_lifecycle", "claims_management"]
-    for tag in sources:
-        src = session.query(DataProduct).filter_by(tag_value=tag).first()
-        if src:
-            existing = session.query(DataProductLineage).filter_by(
-                source_product_id=src.id, target_product_id=risk.id
-            ).first()
-            if not existing:
-                lineage = DataProductLineage(
-                    source_product_id=src.id,
-                    target_product_id=risk.id,
-                )
-                lineage.source_tables = [f"{tag}.*"]
-                lineage.target_tables = ["ins_policy.risk_analytics.*"]
-                session.add(lineage)
-    session.commit()
-    logger.info("Lineage seeded for risk_analytics")
 
 
 @asynccontextmanager
