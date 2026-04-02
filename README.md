@@ -6,14 +6,14 @@ A comprehensive Data Products governance platform built on Azure Databricks, dem
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Databricks App (FastAPI + React)          │
+│                    Databricks App (FastAPI + React)         |
 │  ┌──────────────┐  ┌──────────────────────────────────────┐ │
 │  │  React UI    │  │  FastAPI Backend                     │ │
 │  │  shadcn/ui   │──│  - Products & Versioning API         │ │
 │  │  React Flow  │  │  - Contracts API (ODCS)              │ │
 │  │  Tailwind    │  │  - Lineage, Settings & Scan API      │ │
 │  └──────────────┘  └───────────┬──────────────────────────┘ │
-└─────────────────────────────────┼────────────────────────────┘
+└─────────────────────────────────┼───────────────────────────┘
                                   │
            ┌──────────────────────┼───────────────────────┐
            │                      │                       │
@@ -24,7 +24,7 @@ A comprehensive Data Products governance platform built on Azure Databricks, dem
   │  - Products      │  │  - 9 Schemas       │  │  - Column     │
   │  - Contracts     │  │  - 28 Tables       │  │    metadata   │
   │  - Versions      │  │  - ~2.4M Records   │  │  - Lineage    │
-  │  - Lineage       │  │                    │  │    discovery   │
+  │  - Lineage       │  │                    │  │    discovery  │
   └──────────────────┘  └────────────────────┘  └───────────────┘
 ```
 
@@ -283,3 +283,8 @@ After deployment, open the app and click **"Trigger Scan"** in Settings, then **
 - **ODCS v3.0** — Open Data Contract Standard for contract YAML
 - **Faker** — Realistic synthetic data generation
 - **Semantic Versioning** — Schema change tracking with major/minor/patch classification
+
+## Disclaimer:
+
+- The sample app provided is intended to aid in getting started and may not be production-ready. The code does not have any guarantees/warantees/support. Use it at your own risk.
+- This repo contains AI generated elements.
